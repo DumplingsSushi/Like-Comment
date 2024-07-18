@@ -7,18 +7,38 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
+            background-color: antiquewhite;
             width: 900px;
             align-content: center;
             margin-left:20%;    
         }
-        .logout-btn{
+        .logout-btn {
+            float: right;
+            margin-left: 20px;
             background-color: red;
+            color: #fff; 
         }
 
+        .like-btn {
+            background-color: green; /* Update this line */
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .like-btn:hover {
+            background-color: #3e8e41;
+        }
+        input{
+            background-color: bisque;
+        }
         .header {
             text-align: center;
             margin-bottom: 20px;
+            border-radius: 12px;
         }
 
         .header button {
@@ -34,7 +54,6 @@
         .header button:hover {
             background-color: #3e8e41;
         }
-
         .post-btn {
             float: none;
             margin-right: 20px;
@@ -52,13 +71,14 @@
             object-fit: cover; 
             border-radius: 10px; 
             margin: 10px; 
+            margin-left: 19%;
         }
         caption{
             text-align: center;
         }
 
-        .like-btn, button[type="submit"] {
-            background-color: #7f751e;
+        .like-btn,button[type="submit"] {
+            background-color: green;
             color: #fff;
             padding: 10px 20px;
             border: none;
@@ -75,27 +95,39 @@
             margin-bottom: 20px;
             padding: 20px;
             border-bottom: 1px solid #ccc;
-            background-color: #fff;
+            background-color: antiquewhite;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-
+        h1{
+            margin-top: 55px;
+        }
         h2 {
             margin-top: 0;
         }
-
+        h4 {
+            margin-top: 0;
+            font-size: 16px;
+            margin-left: 19%;
+        }
         h3 {
             font-weight: normal;
             font-size: 16px;
             color: #666;
+            margin-left: 19%;
         }
+        p,ul,span,input,.like-btn{
+            margin-left: 19%;   
+        }
+        
+    
     </style>
 </head>
 <body>
     <div class="header">
-        <h1> welcome <%= username %></h1>
+        <h1> Welcome <%= username %></h1>
         <button id="post-btn" class="post-btn">Add Post</button> 
-        <form action="/logout" method="post" class="logout-form">
+        <form action="/logout" method="post" class="logout">
             <button type="submit" class="logout-btn">Logout</button>
         </form>
     </div>
@@ -103,28 +135,32 @@
 
     <% posts.forEach(post => { %>
         <div class="post-block">
-            <h2><%= post.title %></h2><h3>By <%= post.artist %></h3>
+            <h4><%= post.title %></h4><h3>By <%= post.artist %></h3>
             <img src="./uploads/<%= post.photo %>" alt="<%= post.title %>" />
-            
+        
             <p class="caption"><%= post.content %></p>
-            <p>
-                <span class="like "><%= post.likes.length %> likes</span><br>
+            <div class="actions">
+                <span class="like "><%= post.likes.length %> likes</span>
                 <% if (post.userId.toString() !== id.toString()) { %>
-                    <button class="like-btn" data-post-id="<%= post._id %>">Like</button>
+                    <form action="/like" method="post">
+                        <input type="hidden" name="postId" value="<%= post._id %>" />
+                        <button type="submit" class="like-btn">Like</button>
+                    </form>
                 <% } %><br>
-                <span class="comment"><%= post.comments.length %> comments</span>
-                
-            </p>
-            <% if(post.userId.toString()!== id.toString()) { %>
-                <form action="/comment" method="post">
-                    <input type="hidden" name="postId" value="<%= post._id %>" />
-                    <input type="text" name="comment" placeholder="Enter your comment" />
-                    <button type="submit">Comment</button>
-                </form>
-            <% } %>
+                <span style="margin-top: 20px;" class="comment"><%= post.comments.length %> comments</span>
+                <% if(post.userId.toString()!== id.toString()) { %>
+                    <form action="/comment" method="post">
+                        <input type="hidden" name="postId" value="<%= post._id %>" />
+                        <input type="text" name="comment" placeholder="Enter your comment" required/>
+                        <button type="submit">Comment</button>
+                    </form>
+                <% } %>
+            </div>
             <ul>
-                <% post.comments.forEach(comment => { %>
-                <li><%= comment.content %></li>
+                <%commentos.forEach(comment => { %>
+                    <% if(comment.postId.toString() == post._id.toString()) { %>
+                        <li><%= comment.content %></li>
+                    <% } %>
                 <% }); %>
             </ul>
         </div>
@@ -132,27 +168,7 @@
 
     <script>
         document.getElementById('post-btn').addEventListener('click', () => {
-            // Redirect the user to the registration page
             window.location.href = '/uploadpost';
-        });
-        document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const postId = btn.getAttribute('data-post-id');
-                try {
-                const response = await fetch('/like', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ postId }),
-                });
-                const result = await response.json();
-                if (result.success) {
-                    const likeCount = document.querySelector(`[data-post-id="${postId}"] + span`);
-                    likeCount.textContent = `${result.likes} likes`;
-                }
-                } catch (err) {
-                console.error(err);
-                }
-            });
         });
     </script>
 </body>
