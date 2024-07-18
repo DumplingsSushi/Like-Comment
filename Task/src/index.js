@@ -1,7 +1,5 @@
 const express = require("express");
 const dotenv = require('dotenv');
-const path = require("path");
-const mongoose = require("mongoose");
 const session = require("express-session");
 const mongoDbSession = require("connect-mongodb-session")(session);
 const bcrypt = require("bcrypt");
@@ -10,7 +8,6 @@ const models = require('./config');
 const multer = require('multer');
 const app = express();
 
-dotenv.config({ path: '.env' });
 const PORT = 5000; 
 
 app.use(express.json());
@@ -30,11 +27,6 @@ app.use(
         store: store,
     })
 );
-app.use((req, res, next)=>{
-    res.locals.message = req.session.message;
-    delete req.session.message;
-    next();
-});
 
 const isAuth = (req, res, next) => {
     if (req.session.isAuth) {
@@ -121,11 +113,9 @@ app.post('/register', async (req, res) => {
         }
     }
 });
-
 app.get("/login", async (req, res) => {
     res.render("../view/login.ejs");
 });
-
 //login validation
 app.post('/login', async (req, res) => {
     try {
@@ -152,8 +142,9 @@ app.use('/uploads', express.static('uploads'));
 app.get("/posts",isAuth, async (req, res) => {
     const username = req.session.userName;
     const id = req.session.customerId;
-    const posts = await models.post.find({})
-    res.render("../view/posts.ejs",{username,posts,id});
+    const posts = await models.post.find({});
+    const commentos = await models.comment.find({});
+    res.render("../view/posts.ejs",{username,posts,id,commentos});
 });
 //add post 
 app.get("/uploadpost",isAuth, (req, res) => {
@@ -162,7 +153,6 @@ app.get("/uploadpost",isAuth, (req, res) => {
     res.render("../view/uploadpost.ejs",{username});
 });
 // upload 
-
 const upload = multer({ dest: './uploads/' });
 
 app.post('/posts', upload.single('photo'), async (req, res) => {
@@ -185,50 +175,46 @@ app.post('/posts', upload.single('photo'), async (req, res) => {
     res.status(500).send('Error uploading post.');
   }
 });
-
-//like and comment 
+//like
 app.post('/like', async (req, res) => {
+    //console.log('Received like request:', req.body);
     const postId = req.body.postId;
     const userId = req.session.customerId;
-  
+
     try {
-      const post = await models.post.findById(postId);
-      const like = await models.like.findOne({ userId, postId });
-  
-      if (!like) {
-        const newLike = new models.like({ userId, postId });
-        await newLike.save();
-        post.likes.push(newLike._id);
-        await post.save();
-      }
-      res.redirect('/posts');
-      
+        const post = await models.post.findById(postId);
+        const like = await models.like.findOne({ userId, postId });
+        if (!like) {
+            const newLike = new models.like({ userId, postId });
+            await newLike.save();
+            post.likes.push(newLike._id);
+            await post.save();
+        } else {
+            console.log("already liked");
+        }
+    res.redirect('/posts');
     } catch (err) {
-      console.error(err);
-      res.status(500).send('Error liking post.');
+        console.error('Error liking post:', err);
+        res.status(500).json({ success: false, message: 'Error liking post' });
     }
 });
-
+//comment
 app.post('/comment', async (req, res) => {
     const postId = req.body.postId;
     const userId = req.session.customerId;
     const commentContent = req.body.comment;
-  
     try {
       const post = await models.post.findById(postId);
       const comment = new models.comment({ content: commentContent, userId, postId });
       await comment.save();
       post.comments.push(comment._id);
       await post.save();
-  
       res.redirect('/posts');
     } catch (err) {
       console.error(err);
       res.status(500).send('Error commenting on post.');
     }
 });
-
-
 //logout 
 app.post('/logout', (req, res) => {
     req.session.destroy((err) => {
@@ -239,7 +225,7 @@ app.post('/logout', (req, res) => {
         }
     });
 });
-
+//Run app 
 app.listen(PORT, () => {
     console.log(`running on http://localhost:${PORT}`);
 });
